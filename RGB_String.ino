@@ -7,32 +7,9 @@ void setup() {
 
 void set_colour(uint8_t red, uint8_t green, uint8_t blue)
 {
-//  if(red != 0)
-//  {
     analogWrite(11, red);
-//  }
-//  else
-//  {
-//    digitalWrite(11, HIGH);
-//  }
-
-//  if(green != 0)
-//  {
     analogWrite(10, green);
-//  }
-//  else
-//  {
-//    digitalWrite(10, HIGH);
-//  }
-
-//  if(blue != 0)
-//  {
     analogWrite(9, blue);
-//  }
-//  else
-//  {
-//    digitalWrite(9, HIGH);
-//  }
 }
 
 uint8_t limit(int in)
@@ -118,19 +95,4 @@ void loop() {
   fade(1000, WHITE, RED);
 #endif
 
-//  fade(1000, 255, 0, 0, 255,255, 0);
-//  fade(1000, 0, 0, 0, 0, 255, 0);
-  //set_colour(255, 0, 0);
-//    digitalWrite(9, HIGH);
-//    digitalWrite(10, HIGH);
-//   digitalWrite(11, HIGH);
-//set_colour(0,0,0);
-//  delay(1000);
-//set_colour(0,0,128);
-//  delay(1000);
-//    digitalWrite(9, LOW);
-//    digitalWrite(10, LOW);
-//    digitalWrite(11, LOW);
-  //set_colour(0, 0, 0);
-//  delay(3000);
 }
