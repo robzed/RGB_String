@@ -64,26 +64,50 @@ int time_mode() {
   int simple_time = now.hour() * 100 + now.minute();
 
   int mode = MODE_default;
-  if(simple_time > 2245) {
-    mode = MODE_sleeping;
-  } else if (simple_time > 2100) {
-    mode =  MODE_late_evening;
-  } else if (simple_time > 1800) {
-    mode =  MODE_evening;
-  } else if (simple_time > 1630) {
-    mode =  MODE_late_afternoon;
-  } else if (simple_time > 1300) {
-    mode =  MODE_day;
-  } else if (simple_time > 1200) {
-    mode =  MODE_midday;
-  } else if (simple_time > 830) {
-    mode =  MODE_day;
-  } else if (simple_time > 700) {
-    mode =  MODE_dawn;
-  } else {
-    mode =  MODE_sleeping;
+  if(now.dayOfTheWeek() == 6 || now.dayOfTheWeek() == 0)
+  {
+    if(simple_time > 2200) {
+      mode = MODE_sleeping;
+    } else if (simple_time > 2100) {
+      mode =  MODE_late_evening;
+    } else if (simple_time > 1800) {
+      mode =  MODE_evening;
+    } else if (simple_time > 1630) {
+      mode =  MODE_late_afternoon;
+    } else if (simple_time > 1300) {
+      mode =  MODE_day;
+    } else if (simple_time > 1200) {
+      mode =  MODE_midday;
+    } else if (simple_time > 1000) {
+      mode =  MODE_day;
+    } else if (simple_time > 800) {
+      mode =  MODE_dawn;
+    } else {
+      mode =  MODE_sleeping;
+    }    
   }
-  
+  else
+  {
+    if(simple_time > 2245) {
+      mode = MODE_sleeping;
+    } else if (simple_time > 2100) {
+      mode =  MODE_late_evening;
+    } else if (simple_time > 1800) {
+      mode =  MODE_evening;
+    } else if (simple_time > 1630) {
+      mode =  MODE_late_afternoon;
+    } else if (simple_time > 1300) {
+      mode =  MODE_day;
+    } else if (simple_time > 1200) {
+      mode =  MODE_midday;
+    } else if (simple_time > 830) {
+      mode =  MODE_day;
+    } else if (simple_time > 700) {
+      mode =  MODE_dawn;
+    } else {
+      mode =  MODE_sleeping;
+    }
+  }
   return mode;
 }
 
@@ -237,20 +261,22 @@ void dawn_starts()
   fade(60000, RED, YELLOW);
   fade(60000, YELLOW, CYAN);
   fade(60000, CYAN, WHITE);
+  fade(1000, WHITE, BLACK);
 }
 
 void willow()
 {
-  fade(5000, GREEN, YELLOW);
-  fade(5000, YELLOW, CYAN);
-  fade(5000, CYAN, GREEN);
+  fade(8000, GREEN, YELLOW);
+  fade(8000, YELLOW, GREEN);
+  //fade(5000, CYAN, GREEN);
 }
 
 void darkness_falls()
 {
-  fade(5000, BLACK, RED);
-  fade(5000, RED, BLUE);
-  fade(5000, RED, BLACK);
+  fade(10000, BLACK, RED);
+  fade(10000, RED, BLUE);
+  fade(10000, BLUE, RED);
+  fade(10000, RED, BLACK);
 }
 
 
