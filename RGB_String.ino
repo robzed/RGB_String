@@ -3,6 +3,7 @@
 
 RTC_PCF8563 rtc;
 bool rtc_active = false;
+
 void setup() {
     Serial.begin(115200);
     if (! rtc.begin()) {
@@ -48,8 +49,11 @@ void setup() {
     pinMode(11, OUTPUT);    // sets the digital pin 13 as output
 }
 
+
+#define NO_MODE_OVERRIDE -1
+int mode_override = NO_MODE_OVERRIDE;
+
 enum {
-  MODE_default = 0,
   MODE_sleeping,
   MODE_dawn,
   MODE_day,
@@ -58,6 +62,79 @@ enum {
   MODE_evening,
   MODE_late_evening,
 };
+#define MODE_default MODE_sleeping
+
+void show_time();
+
+bool command(void) {
+   bool button_pressed = false;
+   while(Serial.available()) {
+      char inChar = (char)Serial.read(); // get the new byte:
+      switch(inChar) {
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+          Serial.print("Mode Override ");
+          Serial.print(inChar);
+          Serial.println(" - esc to cancel");
+          mode_override = inChar-'1';
+          button_pressed = true;
+          break;
+
+        case '\x1B':
+          Serial.println("Cancel");
+          mode_override = NO_MODE_OVERRIDE;
+          button_pressed = true;
+          break;
+
+        case '+':
+        {
+            show_time();
+            DateTime now = rtc.now();
+            TimeSpan incr(60);
+            now = now + incr;
+            rtc.adjust(now);
+            show_time();
+            break;
+        }
+
+        case '-':
+        {
+            show_time();
+              DateTime now = rtc.now();
+              TimeSpan decrement(-60);
+              now = now + decrement;
+              rtc.adjust(now);
+              show_time();
+            break;
+        }
+
+        default:
+          button_pressed = true;
+          break;
+        }
+   }
+   return button_pressed;
+}
+
+bool delay_with_command(unsigned long delay_in_ms) {
+   unsigned long finish_time = millis() + delay_in_ms;
+   bool button_pressed = false;
+   while(millis() < finish_time && not button_pressed)
+   {
+      button_pressed = command();
+   }
+   return button_pressed;
+}
+
+
+
+
 
 int time_mode() {
   DateTime now = rtc.now();
@@ -66,6 +143,9 @@ int time_mode() {
   int mode = MODE_default;
   if(now.dayOfTheWeek() == 6 || now.dayOfTheWeek() == 0)
   {
+    // 
+    // Weekend settings
+    // 
     if(simple_time > 2200) {
       mode = MODE_sleeping;
     } else if (simple_time > 2100) {
@@ -74,7 +154,7 @@ int time_mode() {
       mode =  MODE_evening;
     } else if (simple_time > 1630) {
       mode =  MODE_late_afternoon;
-    } else if (simple_time > 1300) {
+    } else if (simple_time > 1330) {
       mode =  MODE_day;
     } else if (simple_time > 1200) {
       mode =  MODE_midday;
@@ -88,6 +168,10 @@ int time_mode() {
   }
   else
   {
+    //
+    // Weekday settings
+    //
+    
     if(simple_time > 2245) {
       mode = MODE_sleeping;
     } else if (simple_time > 2100) {
@@ -177,7 +261,7 @@ uint8_t limit(int in)
   return ret;
 }
 
-void fade(int time_ms, uint8_t r1,uint8_t g1, uint8_t b1, uint8_t r2, uint8_t g2, uint8_t b2)
+bool fade(int time_ms, uint8_t r1,uint8_t g1, uint8_t b1, uint8_t r2, uint8_t g2, uint8_t b2)
 {
 #define STEP_TIME 25
   float t = (float)time_ms / (float)STEP_TIME;
@@ -188,19 +272,22 @@ void fade(int time_ms, uint8_t r1,uint8_t g1, uint8_t b1, uint8_t r2, uint8_t g2
   float g_current = g1;
   float b_current = b1;
   float t_current = time_ms;
-  while(t_current > 0)
+  bool button_pressed = false;
+  while(t_current > 0 && button_pressed == false)
   {
     uint8_t r = limit(r_current);
     uint8_t g = limit(g_current);
     uint8_t b = limit(b_current);
     set_colour(r, g, b);
 
-    delay(STEP_TIME);
+    button_pressed = delay_with_command(STEP_TIME);
     t_current -= STEP_TIME;
     r_current += dr;
     g_current += dg;
     b_current += db;
   }
+
+  return button_pressed;
 }
 
 #define BLACK 0, 0, 0
@@ -217,34 +304,36 @@ void fade(int time_ms, uint8_t r1,uint8_t g1, uint8_t b1, uint8_t r2, uint8_t g2
 
 void rainbow()
 {
-  fade(COLOUR_CHANGE_TIME, RED, YELLOW);
-  fade(COLOUR_CHANGE_TIME, YELLOW, GREEN);
-  fade(COLOUR_CHANGE_TIME, GREEN, CYAN);
-  fade(COLOUR_CHANGE_TIME, CYAN, BLUE);
-  fade(COLOUR_CHANGE_TIME, BLUE, MAGENTA);
-  fade(COLOUR_CHANGE_TIME, MAGENTA, RED);
+  bool b = false;
+  b = fade(COLOUR_CHANGE_TIME, RED, YELLOW); if(b) { return; }
+  b = fade(COLOUR_CHANGE_TIME, YELLOW, GREEN); if(b) { return; }
+  b = fade(COLOUR_CHANGE_TIME, GREEN, CYAN); if(b) { return; }
+  b = fade(COLOUR_CHANGE_TIME, CYAN, BLUE); if(b) { return; }
+  b = fade(COLOUR_CHANGE_TIME, BLUE, MAGENTA); if(b) { return; }
+  b = fade(COLOUR_CHANGE_TIME, MAGENTA, RED); if(b) { return; }
 }
 
 void white_rainbow()
 {
-  fade(COLOUR_CHANGE_TIME, RED, YELLOW);
-  fade(1000, YELLOW, WHITE);
-  fade(1000, WHITE, YELLOW);
-  fade(COLOUR_CHANGE_TIME, YELLOW, GREEN);
-  fade(1000, GREEN, WHITE);
-  fade(1000, WHITE, GREEN);
-  fade(COLOUR_CHANGE_TIME, GREEN, CYAN);
-  fade(1000, CYAN, WHITE);
-  fade(1000, WHITE, CYAN);
-  fade(COLOUR_CHANGE_TIME, CYAN, BLUE);
-  fade(1000, BLUE, WHITE);
-  fade(1000, WHITE, BLUE);
-  fade(COLOUR_CHANGE_TIME, BLUE, MAGENTA);
-  fade(1000, MAGENTA, WHITE);
-  fade(1000, WHITE, MAGENTA);
-  fade(COLOUR_CHANGE_TIME, MAGENTA, RED);
-  fade(1000, RED, WHITE);
-  fade(1000, WHITE, RED);
+  bool b = false;
+  b = fade(COLOUR_CHANGE_TIME, RED, YELLOW); if(b) { return; }
+  b = fade(1000, YELLOW, WHITE); if(b) { return; }
+  b = fade(1000, WHITE, YELLOW); if(b) { return; }
+  b = fade(COLOUR_CHANGE_TIME, YELLOW, GREEN); if(b) { return; }
+  b = fade(1000, GREEN, WHITE); if(b) { return; }
+  b = fade(1000, WHITE, GREEN); if(b) { return; }
+  b = fade(COLOUR_CHANGE_TIME, GREEN, CYAN); if(b) { return; }
+  b = fade(1000, CYAN, WHITE); if(b) { return; }
+  b = fade(1000, WHITE, CYAN); if(b) { return; }
+  b = fade(COLOUR_CHANGE_TIME, CYAN, BLUE); if(b) { return; }
+  b = fade(1000, BLUE, WHITE); if(b) { return; }
+  b = fade(1000, WHITE, BLUE); if(b) { return; }
+  b = fade(COLOUR_CHANGE_TIME, BLUE, MAGENTA); if(b) { return; }
+  b = fade(1000, MAGENTA, WHITE); if(b) { return; }
+  b = fade(1000, WHITE, MAGENTA); if(b) { return; }
+  b = fade(COLOUR_CHANGE_TIME, MAGENTA, RED); if(b) { return; }
+  b = fade(1000, RED, WHITE); if(b) { return; }
+  b = fade(1000, WHITE, RED); if(b) { return; }
 }
 
 void all_off()
@@ -252,40 +341,46 @@ void all_off()
   digitalWrite(9, LOW);
   digitalWrite(10, LOW);
   digitalWrite(11, LOW);
-  delay(5000);
+  delay_with_command(5000);
 }
 
 void dawn_starts()
 {
-  fade(60000, BLACK, RED);
-  fade(60000, RED, YELLOW);
-  fade(60000, YELLOW, CYAN);
-  fade(60000, CYAN, WHITE);
-  fade(1000, WHITE, BLACK);
+  bool b = false;
+  b = fade(1000, BLACK, WHITE); if(b) { return; }
+  b = fade(30000, WHITE, RED); if(b) { return; }
+  b = fade(30000, RED, YELLOW); if(b) { return; }
+  b = fade(30000, YELLOW, CYAN); if(b) { return; }
+  b = fade(30000, CYAN, WHITE); if(b) { return; }
+  b = fade(1000, WHITE, BLACK); if(b) { return; }
 }
 
 void willow()
 {
-  fade(8000, GREEN, YELLOW);
-  fade(8000, YELLOW, GREEN);
-  //fade(5000, CYAN, GREEN);
+  bool b = false;
+  b = fade(8000, GREEN, YELLOW); if(b) { return; }
+  b = fade(8000, YELLOW, GREEN); if(b) { return; }
+  //b = fade(5000, CYAN, GREEN); if(b) { return; }
 }
 
 void darkness_falls()
 {
-  fade(10000, BLACK, RED);
-  fade(10000, RED, BLUE);
-  fade(10000, BLUE, RED);
-  fade(10000, RED, BLACK);
+  bool b = false;
+  b = fade(10000, BLACK, RED); if(b) { return; }
+  b = fade(10000, RED, BLUE); if(b) { return; }
+  b = fade(10000, BLUE, RED); if(b) { return; }
+  b = fade(10000, RED, BLACK); if(b) { return; }
 }
 
 
-int mode = 0;
 void loop() {
-
-  mode = time_mode();
+  int mode = time_mode();
   show_time();
-  
+  if(mode_override != NO_MODE_OVERRIDE)
+  {
+    mode = mode_override;
+  }
+    
   switch(mode) {
     case MODE_sleeping:
       Serial.println("Sleeping");
